@@ -316,16 +316,16 @@ namespace Reportman.Commands
 #if NETSTANDARD6_0
 #else
                                 case "-GETPRINTERS":
+#if FORMS
                                     System.Text.StringBuilder nprinters = new System.Text.StringBuilder();
                                     nprinters.AppendLine("Installed printers:");
                                     foreach (string pname in System.Drawing.Printing.PrinterSettings.InstalledPrinters)
                                         nprinters.AppendLine(pname);
-#if FORMS
                                     MessageBox.Show(nprinters.ToString());
-#else
-                                    System.Console.WriteLine(nprinters.ToString());
-#endif
                                     break;
+#else
+                                    throw new NotSupportedException();
+#endif
 #endif
 #endif
                                 case "-PRINTERNAME":
@@ -394,7 +394,6 @@ namespace Reportman.Commands
                         if (providersfilename.Length == 0)
                         {
                             bool firebirdfound = false;
-                            bool firebird2found = false;
                             bool mysqlfound = false;
                             bool sqlitefound = false;
                             for (indexp = 0; indexp < atable.Rows.Count; indexp++)
@@ -402,10 +401,8 @@ namespace Reportman.Commands
                                 if (messageproviders.Length != 0)
                                     messageproviders = messageproviders + (char)13 + (char)10;
                                 string nprovider = atable.Rows[indexp][2].ToString();
-                                if (nprovider == DatabaseInfo.FIREBIRD_PROVIDER)
-                                    firebirdfound = true;
                                 if (nprovider == DatabaseInfo.FIREBIRD_PROVIDER2)
-                                    firebird2found = true;
+                                    firebirdfound = true;
                                 if (nprovider == DatabaseInfo.MYSQL_PROVIDER)
                                     mysqlfound = true;
                                 if (nprovider == DatabaseInfo.SQLITE_PROVIDER)
@@ -413,8 +410,6 @@ namespace Reportman.Commands
                                 messageproviders = messageproviders + atable.Rows[indexp][2].ToString();
                             }
                             if (!firebirdfound)
-                                messageproviders = DatabaseInfo.FIREBIRD_PROVIDER + (char)13 + (char)10 + messageproviders;
-                            if (!firebird2found)
                                 messageproviders = DatabaseInfo.FIREBIRD_PROVIDER2 + (char)13 + (char)10 + messageproviders;
                             if (!mysqlfound)
                                 messageproviders = DatabaseInfo.MYSQL_PROVIDER + (char)13 + (char)10 + messageproviders;
@@ -433,17 +428,14 @@ namespace Reportman.Commands
                             try
                             {
                                 bool firebirdfound = false;
-                                bool firebird2found = false;
                                 bool mysqlfound = false;
                                 bool sqlitefound = false;
                                 Strings nstrings = new Strings();
                                 for (indexp = 0; indexp < atable.Rows.Count; indexp++)
                                 {
                                     string nprovider = atable.Rows[indexp][2].ToString();
-                                    if (nprovider == DatabaseInfo.FIREBIRD_PROVIDER)
-                                        firebirdfound = true;
                                     if (nprovider == DatabaseInfo.FIREBIRD_PROVIDER2)
-                                        firebird2found = true;
+                                        firebirdfound = true;
                                     if (nprovider == DatabaseInfo.MYSQL_PROVIDER)
                                         mysqlfound = true;
                                     if (nprovider == DatabaseInfo.SQLITE_PROVIDER)
@@ -451,8 +443,6 @@ namespace Reportman.Commands
                                     nstrings.Add(nprovider);
                                 }
                                 if (!firebirdfound)
-                                    nstrings.Insert(0, DatabaseInfo.FIREBIRD_PROVIDER);
-                                if (!firebird2found)
                                     nstrings.Insert(0, DatabaseInfo.FIREBIRD_PROVIDER2);
                                 if (!mysqlfound)
                                     nstrings.Insert(0, DatabaseInfo.MYSQL_PROVIDER);
@@ -504,7 +494,11 @@ namespace Reportman.Commands
                     if (showdata)
                     {
                         rp.PrintOnlyIfDataAvailable = false;
+#if FORMS
                         PrintOutPDF printpdf3 = new PrintOutPDF();
+#else
+                        Reportman.Drawing.CrossPlatform.PrintOutPDFFreeType printpdf3 = new Reportman.Drawing.CrossPlatform.PrintOutPDFFreeType();
+#endif
                         rp.BeginPrint(printpdf3);
 #if FORMS
                         DataShow.ShowData(rp, dataset, null);
@@ -523,10 +517,16 @@ namespace Reportman.Commands
                         {
                             foreach (DataColumn ncol in ndataset.Columns)
                             {
-                                string nstring = ndataset.CurrentRow[ncol.ColumnName].ToString().PadLeft(30);
-                                if (nstring.Length > 30)
-                                    nstring = nstring.Substring(0, 30);
-                                System.Console.Write(nstring);
+                                DataRow currentRow = ndataset.CurrentRow;
+                                object? value = currentRow[ncol.ColumnName];
+                                if (value != null)
+                                {
+                                    string xstring = (string)value;
+                                    string nstring = xstring.ToString().PadLeft(30);
+                                    if (nstring.Length > 30)
+                                        nstring = nstring.Substring(0, 30);
+                                    System.Console.Write(nstring);
+                                }
                             }
                             System.Console.WriteLine();
                             ndataset.Next();
@@ -566,7 +566,11 @@ namespace Reportman.Commands
                     if ((evaluatetext) || (syntaxcheck))
                     {
                         rp.PrintOnlyIfDataAvailable = false;
+#if FORMS
                         PrintOutPDF printpdf2 = new PrintOutPDF();
+#else
+                        Reportman.Drawing.CrossPlatform.PrintOutPDFFreeType printpdf2 = new Reportman.Drawing.CrossPlatform.PrintOutPDFFreeType();
+#endif
                         rp.BeginPrint(printpdf2);
                         if (evaluatetext)
                         {
@@ -641,12 +645,16 @@ namespace Reportman.Commands
                         }
 #else
                             throw new Exception("Show progress not supported in console mode");
-#endif                        
+#endif
                         bool compressed = compressedpdf ?? rp.PDFCompressed;
                         if (pdf)
                         {
                             rp.AsyncExecution = false;
+#if FORMS
                             PrintOutPDF printpdf = new PrintOutPDF
+#else
+                            Reportman.Drawing.CrossPlatform.PrintOutPDFFreeType printpdf = new Reportman.Drawing.CrossPlatform.PrintOutPDFFreeType
+#endif
                             {
                                 PDFConformance = rp.PDFConformance,
                                 FileName = pdffilename,
@@ -659,7 +667,11 @@ namespace Reportman.Commands
                         {
                             rp.AsyncExecution = false;
                             rp.TwoPass = true;
+#if FORMS
                             PrintOutPDF printpdf = new PrintOutPDF
+#else
+                            Reportman.Drawing.CrossPlatform.PrintOutPDFFreeType printpdf = new Reportman.Drawing.CrossPlatform.PrintOutPDFFreeType
+#endif
                             {
                                 PDFConformance = rp.PDFConformance,
                                 FileName = "",
@@ -697,18 +709,7 @@ namespace Reportman.Commands
                                 prw.Print(rp.MetaFile);
                             }
 #else
-#if NETCOREAPP2_0
                             throw new Exception("Output to printer not supported in .Net core");
-#else
-#if NETSTANDARD6_0
-#else
-                            PrintOutPrint prw = new PrintOutPrint();
-                                if (printername.Length > 0)
-                                    PrintOutNet.DefaultPrinterName = printername;
-
-                                prw.Print(rp.MetaFile);
-#endif
-#endif
 #endif
 
                             //                                PrintOutWinForms prw = new PrintOutWinForms();
@@ -759,7 +760,6 @@ namespace Reportman.Commands
         {
 #if NETSTANDARD6_0
             DbProviderFactories.RegisterFactory("System.Data.Odbc", System.Data.Odbc.OdbcFactory.Instance);
-            DbProviderFactories.RegisterFactory(DatabaseInfo.FIREBIRD_PROVIDER, FirebirdSql.Data.FirebirdClient.FirebirdClientFactory.Instance);
             DbProviderFactories.RegisterFactory(DatabaseInfo.FIREBIRD_PROVIDER2, FirebirdSql.Data.FirebirdClient.FirebirdClientFactory.Instance);
             DbProviderFactories.RegisterFactory(DatabaseInfo.MYSQL_PROVIDER, MySql.Data.MySqlClient.MySqlClientFactory.Instance);
             DbProviderFactories.RegisterFactory(DatabaseInfo.SQLITE_PROVIDER, Microsoft.Data.Sqlite.SqliteFactory.Instance);
@@ -768,7 +768,6 @@ namespace Reportman.Commands
             {
                 try
                 {
-                    DatabaseInfo.CustomProviderFactories.Add(DatabaseInfo.FIREBIRD_PROVIDER, FirebirdSql.Data.FirebirdClient.FirebirdClientFactory.Instance);
                     Reportman.Reporting.DatabaseInfo.CustomProviderFactories.Add(Reportman.Reporting.DatabaseInfo.FIREBIRD_PROVIDER2, FirebirdSql.Data.FirebirdClient.FirebirdClientFactory.Instance);
                 }
                 catch (Exception E)
